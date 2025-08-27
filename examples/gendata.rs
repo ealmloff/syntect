@@ -10,6 +10,8 @@ use syntect::dumps::*;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSetBuilder;
 
+const INCLUDED_SYNTAXES: &[&str] = &["rs", "js", "ts", "sh", "json", "css", "html", "toml"];
+
 fn usage_and_exit() -> ! {
     println!(
         "USAGE: gendata synpack source-dir \
@@ -32,9 +34,20 @@ fn main() {
             ref _option_metasource,
         ) if cmd == "synpack" => {
             let mut builder = SyntaxSetBuilder::new();
-            builder.add_plain_text_syntax();
             builder.add_from_folder(package_dir, true).unwrap();
-            let ss = builder.build();
+            let all_syntaxes = builder.syntaxes();
+            let mut builder_filtered = SyntaxSetBuilder::new();
+            builder_filtered.add_plain_text_syntax();
+            for syntax in all_syntaxes {
+                if syntax
+                    .file_extensions
+                    .iter()
+                    .any(|ext| INCLUDED_SYNTAXES.contains(&ext.as_str()))
+                {
+                    builder_filtered.add(syntax.clone());
+                }
+            }
+            let ss = builder_filtered.build();
             dump_to_uncompressed_file(&ss, packpath_newlines).unwrap();
 
             let mut builder_nonewlines = SyntaxSetBuilder::new();
